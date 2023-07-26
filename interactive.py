@@ -1,10 +1,11 @@
 import time
+import sys
 import serial
 from enumerate_serial_ports import *
 import math
 
 
-class printer:
+class SerialDevice:
     def __init__(self):
         self._response = ""
 
@@ -20,12 +21,23 @@ class printer:
     def close(self):
         self.ser.close()
 
+    def handle_response(self):
+        if self.ser.in_waiting != 0:
+            c = self.ser.read()
+            if c == b"\n":
+                s = self._response
+                self._response = ""
+                return s
+            else:
+                self._response += c.decode("utf-8")
+
+
+class Printer(SerialDevice):
     def home(self):
         self.send_gcode("G28")
 
     def move(self, x, y, z, speed=200):
-        gcode = f"G0 X{x:.3f} Y{y:.3f} Z{z:.3f} F{speed}"
-        self.send_gcode(gcode)
+        self.send_gcode(f"G0 X{x:.3f} Y{y:.3f} Z{z:.3f} F{speed}")
 
     def move_x(self, x, speed=200):
         gcode = "G01 X " + str(x) + "F" + str(speed)
@@ -44,17 +56,6 @@ class printer:
         print("sending gcode", gcode.encode())
         self.ser.write(gcode.encode())
 
-    def handle_response(self):
-        while self.ser.inWaiting():
-            c = self.ser.read()
-            if c == b"\n":
-                s = self._response
-                self._response = ""
-                return s
-            else:
-                self._response += c.decode("utf-8")
-                # append the character
-
     def wait_for_ok(self):
         while True:
             s = self.handle_response()
@@ -65,9 +66,12 @@ class printer:
 
 
 print("connecting to the last available serial port")
-p = printer()
+p = SerialDevice()
 p.open(enumerate_serial_ports()[-1])
 
+print("connecting to the printer")
+p = Printer()
+p.open(enumerate_serial_ports()[-2])
 time.sleep(1.0)
 while True:
     s = p.handle_response()
@@ -77,16 +81,14 @@ while True:
     else:
         print(s)
 
-
 p.home()
 p.wait_for_ok()
 p.move(100, 100, 50, speed=3000)
 p.wait_for_ok()
 
-while 1:
-    for i in range(36):
-        radius = 25
-        x = 100 + radius * math.cos(math.radians(i * 10))
-        y = 100 + radius * math.sin(math.radians(i * 10))
-        p.move(x, y, 50, speed=3000)
-        p.wait_for_ok()
+
+while True:
+    time.sleep(0.1)
+    s = p.handle_response()
+    if s == None:
+        print(s)
