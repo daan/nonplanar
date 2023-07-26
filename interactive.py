@@ -1,94 +1,64 @@
 import time
 import sys
 import serial
-from enumerate_serial_ports import *
+from serial_device import *
 import math
 
 
-class SerialDevice:
-    def __init__(self):
-        self._response = ""
+print_ports()
 
-    def open(self, p):
-        print("opening port {}".format(p))
-        try:
-            self.ser = serial.Serial(port=p, baudrate=250000, timeout=0, xonxoff=False)
-        except:
-            print("Error opening serial port {}".format(p))
-            sys.exit()
-        self.handle_response()
+print("connecting to the einsy")
 
-    def close(self):
-        self.ser.close()
-
-    def handle_response(self):
-        if self.ser.in_waiting != 0:
-            c = self.ser.read()
-            if c == b"\n":
-                s = self._response
-                self._response = ""
-                return s
-            else:
-                self._response += c.decode("utf-8")
-
-
-class Printer(SerialDevice):
-    def home(self):
-        self.send_gcode("G28")
-
-    def move(self, x, y, z, speed=200):
-        self.send_gcode(f"G0 X{x:.3f} Y{y:.3f} Z{z:.3f} F{speed}")
-
-    def move_x(self, x, speed=200):
-        gcode = "G01 X " + str(x) + "F" + str(speed)
-        self.send_gcode(gcode)
-
-    def move_y(self, y, speed=200):
-        gcode = "G01 Y " + str(y) + "F" + str(speed)
-        self.send_gcode(gcode)
-
-    def move_z(self, z, speed=200):
-        gcode = "G01 Z " + str(z) + "F" + str(speed)
-        self.send_gcode(gcode)
-
-    def send_gcode(self, gcode):
-        gcode += "\n"
-        print("sending gcode", gcode.encode())
-        self.ser.write(gcode.encode())
-
-    def wait_for_ok(self):
-        while True:
-            s = self.handle_response()
-            if s != None:
-                print(s)
-                if s == "ok":
-                    return
-
-
-print("connecting to the last available serial port")
-p = SerialDevice()
-p.open(enumerate_serial_ports()[-1])
-
-print("connecting to the printer")
+devices = get_ports_with_vid(10161)
+print(devices)
 p = Printer()
-p.open(enumerate_serial_ports()[-2])
+p.open(devices[-1], baud=250000)
+
 time.sleep(1.0)
 while True:
-    s = p.handle_response()
+    s = p.readline()
     if s == None:
-        print("init done")
+        print("printer init done")
         break
     else:
         print(s)
 
 p.home()
 p.wait_for_ok()
-p.move(100, 100, 50, speed=3000)
+
+print("homing done")
+
+min_height = 10
+height = min_height
+target_height = height
+radius = 25
+
+
+p.move(100, 100, height, speed=3000)
 p.wait_for_ok()
 
+print("connecting to the RP2040")
+rp2040 = SerialDevice()
+rp2040.open(get_ports_with_vid(9114)[-1])
 
-while True:
-    time.sleep(0.1)
-    s = p.handle_response()
-    if s == None:
-        print(s)
+
+i = 0
+
+while 1:
+    i = (i + 1) % 36
+    x = 100 + radius * math.cos(math.radians(i * 10))
+    y = 100 + radius * math.sin(math.radians(i * 10))
+    if target_height > height:
+        height = min(target_height, height + 0.5)
+    if target_height < height:
+        height = max(target_height, height - 0.5)
+
+    p.move(x, y, height, speed=3000)
+    p.wait_for_ok()
+
+    print(height, target_height)
+
+    new_height = rp2040.readline()
+    if new_height != None:
+        target_height = min_height + float(new_height) * 50
+        print(float(new_height))
