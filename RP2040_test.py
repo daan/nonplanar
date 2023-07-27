@@ -16,8 +16,11 @@ while 1:
     l = rp2040.readline()
     if l != None:
         target_height = 50 + float(l) * 50
-    print(height, target_height)
+        print(height, target_height)
     if target_height > height:
         height = min(target_height, height + 0.1)
+        print(height, target_height)
+
     if target_height < height:
         height = max(target_height, height - 0.1)
+        print(height, target_height)

@@ -41,7 +41,7 @@ class Printer(SerialDevice):
 
     def send_gcode(self, gcode):
         gcode += "\n"
-        print("sending gcode", gcode.encode())
+        # print("sending gcode", gcode.encode())
         self.ser.write(gcode.encode())
 
     def wait_for_ok(self):
