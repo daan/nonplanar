@@ -1,13 +1,20 @@
+# Write your code here :-)
 #
 #   in circuit python use MU editor
 #
-
+debug_printing = False
+def debug(str):
+    if debug_printing:
+        print(f"debug: {str}")
+    
 import board
 import digitalio
 import analogio
 import pwmio
 import busio
 import touchio
+import supervisor
+import sys
 
 import time
 from math import fabs
@@ -15,22 +22,32 @@ from math import fabs
 # crap circuitpython no ticks_ms()
 t_last = time.monotonic()
 
-uart = busio.UART(board.TX, board.RX, baudrate=9600)
-
 # heartbeat
 led = digitalio.DigitalInOut(board.LED)
 led.direction = digitalio.Direction.OUTPUT
 
+#
+# pot meter
+#
 pot = analogio.AnalogIn(board.A0)
+pot_length = 120  # in mm; starting at the motor.
 # rp2040 adc is 12 bit, but circuitpython presents it as 16bit
-last_value = pot.value / 65535
+def pot_value_in_mm():
+    return pot.value / 65535 * pot_length
+last_pot_value = pot_value_in_mm()
 
+#
+# touch pad
+#
 
 touch_pad = board.A1
 touch = touchio.TouchIn(touch_pad)
 # True when the knob is being touched.
 last_touch_state = False
 
+#
+# motor
+#
 
 ain1 = digitalio.DigitalInOut(board.D24)
 ain1.direction = digitalio.Direction.OUTPUT
@@ -38,7 +55,6 @@ ain2 = digitalio.DigitalInOut(board.D25)
 ain2.direction = digitalio.Direction.OUTPUT
 apwm = pwmio.PWMOut(board.D2)
 apwm.duty_cycle = 0
-
 
 def set_motor(speed):
     if speed < 0:
@@ -49,51 +65,61 @@ def set_motor(speed):
         ain2.value = True
     apwm.duty_cycle = abs(speed)
 
-
-target = 32000
-
-#set_motor(-65535)
-#time.sleep(0.1)
-
-set_motor(65535)
-time.sleep(0.1)
-set_motor(0)
-
+target = 60  # mm
+buffer = ""
 
 while True:
+    # deal with touch
     if touch.value != last_touch_state:
         if last_touch_state:
             # user stopped touching
-            #target = pot.value
+            target = pot_value_in_mm()
             last_touch_state = False
-            print("end touch")
+            debug(f"end touch {target:.2f}")
+            print(f"{target:.2f}")
         else:
             last_touch_state = True
-            print("start touch")
+            debug("start touch")
     if touch.value:
-        set_motor(0) # no motor when user touches
-    else: 
-        v = pot.value
+        set_motor(0)  # no motor when user touches
+    else:
+        v = pot_value_in_mm()
         delta = abs(target - v)
-        speed = 65535
-        if delta > 500:
+        speed = 65535 # max speed
+        if delta > 1:
             if v < target:
                 set_motor(speed)
             else:
                 set_motor(-speed)
-            print(f"move motor {v} {target}")
+            debug(f"move motor {v} {target}")
         else:
-            set_motor(0)
-            
+            set_motor(0)        
+        
+        
+        
     # print the value when touching
     if touch.value:
-        value = pot.value / 65535
-        if fabs(last_value - value) > 0.02:
-            print(f"{pot.value / 65535:.2f}")
+        value = pot_value_in_mm()
+        if fabs(last_pot_value - value) > 1:  # only print when changed > 1 mm
+            debug(f"{pot_value_in_mm():.2f}")
             last_value = value
+        
+    # input from host pc        
+    while supervisor.runtime.serial_bytes_available:
+        c = sys.stdin.read(1)
+        if c == "\n":
+            try:
+                target = float(min(pot_length-1, max(0, int(buffer)))) # looks like 119 is max of the pot....
+                debug(f"received target: {target}")                
+            except (TypeError, ValueError):
+                pass
+            buffer = ""
+        else:
+            buffer += c
 
+    # heartbeat, to show that the main loop is still running            
     t = time.monotonic()
-    # heartbeat
     if t > t_last + 0.5:
         t_last = t
         led.value = not led.value
+        

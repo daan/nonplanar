@@ -31,6 +31,21 @@ class SerialDevice:
             else:
                 self._line += c.decode("utf-8")
 
+    def readline_bytes(self):
+        if self.ser.in_waiting != 0:
+            c = self.ser.read()
+            if c == b"\n":
+                s = self._line 
+                if s[-1] == "\r":
+                    s = s[:-1]
+                self._line = ""
+                return s
+            else:
+                self._line += c.decode()
+
+
+    def write(self, str):
+        self.ser.write(str.encode())
 
 class Printer(SerialDevice):
     def home(self):
