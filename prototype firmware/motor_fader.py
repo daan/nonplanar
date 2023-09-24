@@ -1,7 +1,13 @@
-# Write your code here :-)
 #
-#   in circuit python use MU editor
+#   in circuit python. use MU editor
+#   open serial.
+#   type a float and hit enter in the serial window to move the motor
+#   set debug_printing to False when testing with the host side script.
+
 #
+#   TODO: first read message seems ignored. not an issue, but yes.
+#
+
 debug_printing = False
 def debug(str):
     if debug_printing:
@@ -30,10 +36,10 @@ led.direction = digitalio.Direction.OUTPUT
 # pot meter
 #
 pot = analogio.AnalogIn(board.A0)
-pot_length = 120  # in mm; starting at the motor.
+pot_length = 120.0  # in mm; starting at the motor.
 # rp2040 adc is 12 bit, but circuitpython presents it as 16bit
 def pot_value_in_mm():
-    return pot.value / 65535 * pot_length
+    return (pot.value / 65535.0) * pot_length
 last_pot_value = pot_value_in_mm()
 
 #
@@ -109,7 +115,7 @@ while True:
         c = sys.stdin.read(1)
         if c == "\n":
             try:
-                target = float(min(pot_length-1, max(0, int(buffer)))) # looks like 119 is max of the pot....
+                target = min(pot_length-1.0, max(0.0, float(buffer))) # HACK: looks like 119 is max of the pot....
                 debug(f"received target: {target}")                
             except (TypeError, ValueError):
                 pass

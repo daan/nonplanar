@@ -1,6 +1,7 @@
 import time
 import sys
 import serial
+from math import sin, pi
 from serial_device import *
 
 devices = get_ports_with_vid(9114)
@@ -9,29 +10,23 @@ print("connecting to the RP2040")
 rp2040 = SerialDevice()
 rp2040.open(devices[-1])
 
-height = 50
-target_height = 50
+t_last = time.time()
 
-rp2040.write("hello there\n")
-
+position = 60 # mm
+amplitude = 30  # in mm
+period = 1.0  # in seconds
 
 while 1:
-     l = rp2040.readline_bytes()
-     if l != None:
-        print()
-        if ord(l[0]) == 97:
-            rp2040.write("hello\n")
-        else:
-            print(f"read {l}")
+    l = rp2040.readline_bytes()
+    if l != None:
+        try:
+            position = float(l)
+            print(position)
+        except (ValueError, TypeError):
+            pass
 
-
-#     if l != None:
-#         target_height = 50 + float(l) * 50
-#         print(height, target_height)
-#     if target_height > height:
-#         height = min(target_height, height + 0.1)
-#         print(height, target_height)
-
-#     if target_height < height:
-#         height = max(target_height, height - 0.1)
-#         print(height, target_height)
+    t = time.time()
+    if t > t_last + 0.01:
+        t_last = t
+        v = position + amplitude* sin((divmod(t,period)[1]/period) * 2 * pi)        
+        rp2040.write(f"{v:.2f}\n")
