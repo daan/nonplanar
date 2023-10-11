@@ -2,6 +2,13 @@ import time
 import sys
 import serial
 from serial_device import *
+import rotaryio
+import board
+
+flow_encoder = rotaryio.IncrementalEncoder(board.D10, board.D9)
+last_flow_position = None
+speed_encoder = rotaryio.IncrementalEncoder(board.D8, board.D7)
+last_speed_position = None
 
 devices = get_ports_with_vid(9114)
 
@@ -23,6 +30,16 @@ while 1:
             rp2040.write("hello\n")
         else:
             print(f"read {l}")
+
+    flow_position = flow_encoder.position 
+    if last_flow_position is None or flow_position != last_flow_position:
+        print("Flow " + flow_position + "\n")
+    last_flow_position = flow_position
+
+    speed_position = flow_encoder.position 
+    if last_speed_position is None or speed_position != last_speed_position:
+        print("Slow " + speed_position + "\n")
+    last_speed_position = speed_position
 
 
 #     if l != None:
