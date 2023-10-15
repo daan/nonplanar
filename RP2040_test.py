@@ -3,6 +3,13 @@ import sys
 import serial
 from math import sin, pi
 from serial_device import *
+import rotaryio
+import board
+
+flow_encoder = rotaryio.IncrementalEncoder(board.D10, board.D9)
+last_flow_position = None
+speed_encoder = rotaryio.IncrementalEncoder(board.D8, board.D7)
+last_speed_position = None
 
 devices = get_ports_with_vid(9114)
 
@@ -25,8 +32,24 @@ while 1:
         except (ValueError, TypeError):
             pass
 
-    t = time.time()
-    if t > t_last + 0.01:
-        t_last = t
-        v = position + amplitude* sin((divmod(t,period)[1]/period) * 2 * pi)        
-        rp2040.write(f"{v:.2f}\n")
+    flow_position = flow_encoder.position 
+    if last_flow_position is None or flow_position != last_flow_position:
+        print("Flow " + flow_position + "\n")
+    last_flow_position = flow_position
+
+    speed_position = flow_encoder.position 
+    if last_speed_position is None or speed_position != last_speed_position:
+        print("Slow " + speed_position + "\n")
+    last_speed_position = speed_position
+
+
+#     if l != None:
+#         target_height = 50 + float(l) * 50
+#         print(height, target_height)
+#     if target_height > height:
+#         height = min(target_height, height + 0.1)
+#         print(height, target_height)
+
+#     if target_height < height:
+#         height = max(target_height, height - 0.1)
+#         print(height, target_height)
