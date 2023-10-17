@@ -35,7 +35,7 @@ class SerialDevice:
         if self.ser.in_waiting != 0:
             c = self.ser.read()
             if c == b"\n":
-                s = self._line 
+                s = self._line
                 if s[-1] == "\r":
                     s = s[:-1]
                 self._line = ""
@@ -43,9 +43,9 @@ class SerialDevice:
             else:
                 self._line += c.decode()
 
-
     def write(self, str):
         self.ser.write(str.encode())
+
 
 class Printer(SerialDevice):
     def home(self):
@@ -68,7 +68,7 @@ class Printer(SerialDevice):
 
 
 # USB_VENDOR_DICT
-usbvid = {9114: "Adafruit", 10161: "Ultimachine"}
+usbvid = {9114: "Adafruit", 10161: "Ultimachine", 1027: "FTDI"}
 
 
 def print_ports():
