@@ -4,6 +4,7 @@ import digitalio
 import analogio
 import time
 import math
+import rotaryio
 
 needs_homing = True
 
@@ -22,6 +23,15 @@ def pot_value_in_mm():
 
 target_pot_value = pot_value_in_mm()
 current_z_value = pot_value_in_mm()
+
+#
+#Rotary Encoders
+#
+
+flow_encoder = rotaryio.IncrementalEncoder(board.D10, board.D11)
+last_flow_position = None
+speed_encoder = rotaryio.IncrementalEncoder(board.D7, board.D9)
+last_speed_position = None
 
 
 led = digitalio.DigitalInOut(board.LED)
@@ -116,7 +126,7 @@ while True:
 
     if current_state == State.start:
         if needs_homing:
-            write_line("104 S220") 
+            write_line("M104 S220") 
             print("start homing")
             write_line("G28")
             current_state = State.is_homing
@@ -127,7 +137,7 @@ while True:
         print("init sequence")
         write_line("G0 X100 Y100 Z20 f10000")
         write_line("M83") 
-        write_line("109 S220") 
+        write_line("M109 S220") 
 
     # heartbeat
     t = time.monotonic()
