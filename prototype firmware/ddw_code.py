@@ -127,7 +127,6 @@ while True:
                 if line == "":
                     circle_reader.reset()
                     line = circle_reader.readline()
-                write_line(line)
 
                 # i = (i + 1) % steps
                 #
@@ -138,16 +137,16 @@ while True:
                 # x = 100 + radius * math.cos(math.pi * 2 * (i / steps))
                 # y = 100 + radius * math.sin(math.pi * 2 * (i / steps))
 
-                # target_pot_value = pot_value_in_mm()
+                target_pot_value = pot_value_in_mm()
 
-                # if target_pot_value > current_z_value:
-                #    current_z_value += 0.2
-                # else:
-                #    current_z_value -= 0.2
-                #
-                # z = 10+current_z_value / 12
+                if target_pot_value > current_z_value:
+                    current_z_value += 0.2
+                else:
+                    current_z_value -= 0.2
 
-                print(f"circle line : {line}")
+                z = 10 + current_z_value / 12
+
+                write_line(f"{line} Z{z:.2f}")
 
                 # write_line(f"G0 X{x:.2f} Y{y:.2f} F300") # Z{z:.2f}")
 
