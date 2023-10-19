@@ -117,16 +117,25 @@ while True:
 
                 z = 10 + current_z_value / 12
 
-                e = 0.5
+                flow_position = flow_encoder.position 
+                if last_flow_position is None or flow_position != last_flow_position:
+                print("Flow " + flow_position + "\n")
+                e = 0.5 + flow_position / 10
+                last_flow_position = flow_position
 
-                f = 300
+
+                speed_position = flow_encoder.position 
+                if last_speed_position is None or speed_position != last_speed_position:
+                print("Slow " + speed_position + "\n")
+                f = 300 + speed_position
+                last_speed_position = speed_position
 
                 write_line(f"G1 X{x:.2f} Y{y:.2f} Z{z:.2f} E {z:.2f} F{z:.2f}")
                 c_last = time.monotonic()
 
     if current_state == State.start:
         if needs_homing:
-            write_line("M104 S220") 
+
             print("start homing")
             write_line("G28")
             current_state = State.is_homing
